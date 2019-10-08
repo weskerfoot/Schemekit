@@ -11,6 +11,5 @@ A web browser you can control from your Scheme repl!
 * Compile with `./build.sh`
 
 ## How to use
-* Run `./a.out` after compiling
-* Run `(load "test.scm")` to start up the browser in another thread
+* Run `./a.out` after compiling and it will launc the browser.
 * Run `(open-page "https://example.org")` to see it in action.
