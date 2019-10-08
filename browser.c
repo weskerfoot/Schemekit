@@ -61,14 +61,6 @@ launch_webkit(void) {
 }
 
 static SCM
-launch_browser() {
-  printf("Trying to launch the browser\n");
-  const char *startup_filename = "./start_browser.scm";
-  scm_c_primitive_load(startup_filename);
-  return SCM_BOOL_T;
-}
-
-static SCM
 open_page(SCM scm_url) {
   char *url = scm_to_locale_string(scm_url);
   printf("Opening %s\n", url);
@@ -78,7 +70,6 @@ open_page(SCM scm_url) {
 
 static void
 inner_main(void *data, int argc, char **argv) {
-  scm_c_define_gsubr("launch-browser", 0, 0, 0, launch_browser);
   scm_c_define_gsubr("launch-webkit-blocking", 0, 0, 0, launch_webkit);
   scm_c_define_gsubr("open-page", 1, 0, 0, open_page);
 
