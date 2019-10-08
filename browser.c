@@ -24,8 +24,8 @@ closeWebViewCb(WebKitWebView *webView,
 
 WebKitWebView *webView;
 
-static SCM
-start_browser(void) {
+SCM
+launch_webkit(void) {
   /* Initialize GTK+ */
   gtk_init(0, NULL);
 
@@ -57,27 +57,40 @@ start_browser(void) {
 
   /* Run the main GTK+ event loop */
   gtk_main();
-
   return SCM_BOOL_T;
 }
 
 static SCM
-open_page(SCM mystring) {
-  char *c_string = scm_to_locale_string(mystring);
-  printf("Opening %s\n", c_string);
-  webkit_web_view_load_uri(webView, c_string);
+launch_browser() {
+  printf("Trying to launch the browser\n");
+  const char *startup_filename = "./start_browser.scm";
+  scm_c_primitive_load(startup_filename);
+  return SCM_BOOL_T;
+}
+
+static SCM
+open_page(SCM scm_url) {
+  char *url = scm_to_locale_string(scm_url);
+  printf("Opening %s\n", url);
+  webkit_web_view_load_uri(webView, url);
   return SCM_BOOL_T;
 }
 
 static void
 inner_main(void *data, int argc, char **argv) {
-  scm_c_define_gsubr("start-browser", 0, 0, 0, start_browser);
+  scm_c_define_gsubr("launch-browser", 0, 0, 0, launch_browser);
+  scm_c_define_gsubr("launch-webkit-blocking", 0, 0, 0, launch_webkit);
   scm_c_define_gsubr("open-page", 1, 0, 0, open_page);
+
+  const char *start_expr = "(call-with-new-thread (lambda () (launch-webkit-blocking)))";
+  scm_c_use_module("ice-9 threads");
+  scm_c_eval_string(start_expr);
+
   scm_shell(argc, argv);
 }
 
 int main(int argc, char *argv[]) {
-    /* Initialize Guile */
-    scm_boot_guile(argc, argv, inner_main, 0);
-    return 0;
+  /* Initialize Guile */
+  scm_boot_guile(argc, argv, inner_main, 0);
+  return 0;
 }
