@@ -22,10 +22,9 @@ closeWebViewCb(WebKitWebView *webView,
     return TRUE;
 }
 
-WebKitWebView *webView;
-
 SCM
-launch_webkit(void) {
+launch_webkit(SCM webview) {
+  WebKitWebView *webView = scm_to_pointer(webview);
   /* Initialize GTK+ */
   gtk_init(0, NULL);
 
@@ -33,9 +32,6 @@ launch_webkit(void) {
   GtkWidget *main_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
   gtk_window_set_default_size(GTK_WINDOW(main_window), 800, 600);
-
-  /* Create a browser instance */
-  webView = WEBKIT_WEB_VIEW(webkit_web_view_new());
 
   /* Put the browser area into the main window */
   gtk_container_add(GTK_CONTAINER(main_window), GTK_WIDGET(webView));
@@ -61,20 +57,47 @@ launch_webkit(void) {
 }
 
 static SCM
-open_page(SCM scm_url) {
+open_page(SCM webview, SCM scm_url) {
   char *url = scm_to_locale_string(scm_url);
   printf("Opening %s\n", url);
+  WebKitWebView *webView = scm_to_pointer(webview);
   webkit_web_view_load_uri(webView, url);
   return SCM_BOOL_T;
 }
 
-static void
-inner_main(void *data, int argc, char **argv) {
-  scm_c_define_gsubr("launch-webkit-blocking", 0, 0, 0, launch_webkit);
-  scm_c_define_gsubr("open-page", 1, 0, 0, open_page);
+static SCM
+make_webview() {
+  WebKitWebView *webView = WEBKIT_WEB_VIEW(webkit_web_view_new());
+  return scm_from_pointer(webView, NULL);
+}
 
-  const char *start_expr = "(call-with-new-thread (lambda () (launch-webkit-blocking)))";
+static void
+load_modules(void) {
   scm_c_use_module("ice-9 threads");
+  scm_c_use_module("ice-9 atomic");
+}
+
+static void
+run_repl(void *data, int argc, char **argv) {
+  load_modules();
+
+  scm_c_define_gsubr("launch-webkit-blocking", 1, 0, 0, launch_webkit);
+  scm_c_define_gsubr("open-page-with-webview", 2, 0, 0, open_page);
+  scm_c_define_gsubr("make-webview", 0, 0, 0, make_webview);
+
+  const char *start_expr = ""
+    "(define atomic-webview (make-atomic-box #f))"
+    "(define (open-page url)"
+      "(cond"
+        "((atomic-box-ref atomic-webview)"
+          "(open-page-with-webview (atomic-box-ref atomic-webview) url))"
+        "(else #f)))"
+    "(call-with-new-thread"
+      "(lambda () "
+        "(define webview (make-webview))"
+        "(atomic-box-set! atomic-webview webview)"
+        "(launch-webkit-blocking webview)))";
+
   scm_c_eval_string(start_expr);
 
   scm_shell(argc, argv);
@@ -82,6 +105,6 @@ inner_main(void *data, int argc, char **argv) {
 
 int main(int argc, char *argv[]) {
   /* Initialize Guile */
-  scm_boot_guile(argc, argv, inner_main, 0);
+  scm_boot_guile(argc, argv, run_repl, 0);
   return 0;
 }
