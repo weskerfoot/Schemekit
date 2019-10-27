@@ -81,24 +81,13 @@ static void
 run_repl(void *data, int argc, char **argv) {
   load_modules();
 
+  GAsyncQueue *message_qu = g_async_queue_new();
+
   scm_c_define_gsubr("launch-webkit-blocking", 1, 0, 0, launch_webkit);
   scm_c_define_gsubr("open-page-with-webview", 2, 0, 0, open_page);
   scm_c_define_gsubr("make-webview", 0, 0, 0, make_webview);
 
-  const char *start_expr = ""
-    "(define atomic-webview (make-atomic-box #f))"
-    "(define (open-page url)"
-      "(cond"
-        "((atomic-box-ref atomic-webview)"
-          "(open-page-with-webview (atomic-box-ref atomic-webview) url))"
-        "(else #f)))"
-    "(call-with-new-thread"
-      "(lambda () "
-        "(define webview (make-webview))"
-        "(atomic-box-set! atomic-webview webview)"
-        "(launch-webkit-blocking webview)))";
-
-  scm_c_eval_string(start_expr);
+  scm_c_primitive_load("./browser.scm");
 
   scm_shell(argc, argv);
 }
