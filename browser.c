@@ -125,6 +125,12 @@ launch_webkit(SCM qu) {
   WebKitWebView *webView = make_webview();
   GAsyncQueue *g_queue = scm_to_pointer(qu);
 
+  /* Get a default webkit context for modifying the cache policy */
+  WebKitWebContext *webkit_ctx = webkit_web_context_get_default();
+
+  webkit_web_context_set_cache_model(webkit_ctx,
+                                     WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
+
   /* Initialize GTK+ */
   gtk_init(0, NULL);
 
