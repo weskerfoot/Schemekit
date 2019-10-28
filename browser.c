@@ -5,6 +5,85 @@
 #include <libguile/strings.h>
 
 static void
+load_modules(void) {
+  scm_c_use_module("ice-9 threads");
+  scm_c_use_module("ice-9 atomic");
+}
+
+struct QueueData {
+  GAsyncQueue *queue;
+  WebKitWebView *webView;
+};
+
+struct BrowserMessage {
+  enum BrowserEvent {
+    LOAD = 0,
+    CLOSE = 1,
+    EMPTY = 2
+  } event;
+  void *data;
+};
+
+static gboolean
+eventCallback(void *data) {
+  struct QueueData *qdata = (struct QueueData*)data;
+
+  struct BrowserMessage *msg = g_async_queue_timeout_pop(qdata->queue, 20);
+  if (msg != NULL) {
+    switch (msg->event) {
+      case LOAD:
+        printf("Got a load event\n");
+        printf(msg->data);
+        webkit_web_view_load_uri(qdata->webView, msg->data);
+        break;
+      case CLOSE:
+        printf("Got a close event\n");
+        break;
+      default:
+        printf("Got an unknown event\n");
+        break;
+    }
+    free(msg);
+  }
+  return TRUE;
+}
+
+static SCM
+qu_push(SCM scm_msg_type,
+        SCM scm_message,
+        SCM scm_qu) {
+
+  struct BrowserMessage *msg = malloc( sizeof(*msg) );
+
+  int msg_type = scm_to_int(scm_msg_type);
+
+  msg->data = scm_to_locale_string(scm_message);
+  switch (msg_type) {
+    case LOAD:
+      msg->event = LOAD;
+      break;
+    case CLOSE:
+      msg->event = CLOSE;
+      break;
+    default:
+      msg->event = EMPTY;
+      break;
+  }
+
+  GAsyncQueue *g_queue = scm_to_pointer(scm_qu);
+  g_async_queue_push(g_queue, msg);
+
+  return SCM_BOOL_T;
+}
+
+static WebKitWebView*
+make_webview() {
+  return WEBKIT_WEB_VIEW(webkit_web_view_new());
+}
+
+/* GTK callbacks */
+
+static void
 destroyWindowCb(GtkWidget *widget, GtkWidget *window);
 
 static gboolean
@@ -23,10 +102,19 @@ closeWebViewCb(WebKitWebView *webView,
 }
 
 SCM
-launch_webkit(SCM webview) {
-  WebKitWebView *webView = scm_to_pointer(webview);
+launch_webkit(SCM qu) {
+  WebKitWebView *webView = make_webview();
+  GAsyncQueue *g_queue = scm_to_pointer(qu);
+
   /* Initialize GTK+ */
   gtk_init(0, NULL);
+
+  struct QueueData queue_data;
+
+  queue_data.queue = g_queue;
+  queue_data.webView = webView;
+
+  g_idle_add(eventCallback, &queue_data);
 
   /* Create an 800x600 window that will contain the browser instance */
   GtkWidget *main_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -56,36 +144,16 @@ launch_webkit(SCM webview) {
   return SCM_BOOL_T;
 }
 
-static SCM
-open_page(SCM webview, SCM scm_url) {
-  char *url = scm_to_locale_string(scm_url);
-  printf("Opening %s\n", url);
-  WebKitWebView *webView = scm_to_pointer(webview);
-  webkit_web_view_load_uri(webView, url);
-  return SCM_BOOL_T;
-}
-
-static SCM
-make_webview() {
-  WebKitWebView *webView = WEBKIT_WEB_VIEW(webkit_web_view_new());
-  return scm_from_pointer(webView, NULL);
-}
-
-static void
-load_modules(void) {
-  scm_c_use_module("ice-9 threads");
-  scm_c_use_module("ice-9 atomic");
-}
-
 static void
 run_repl(void *data, int argc, char **argv) {
   load_modules();
 
   GAsyncQueue *message_qu = g_async_queue_new();
 
+  scm_c_define("message-qu", scm_from_pointer(message_qu, NULL));
+
   scm_c_define_gsubr("launch-webkit-blocking", 1, 0, 0, launch_webkit);
-  scm_c_define_gsubr("open-page-with-webview", 2, 0, 0, open_page);
-  scm_c_define_gsubr("make-webview", 0, 0, 0, make_webview);
+  scm_c_define_gsubr("qu-push", 3, 0, 0, qu_push);
 
   scm_c_primitive_load("./browser.scm");
 

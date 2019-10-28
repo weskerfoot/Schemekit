@@ -1,15 +1,13 @@
-
-(define atomic-webview (make-atomic-box #f))
+(define load-event 0)
+(define close-event 1)
+(define empty-event 2)
 
 (define (open-page url)
- (cond
-  ((atomic-box-ref atomic-webview)
-   (open-page-with-webview (atomic-box-ref atomic-webview) url))
-  (else #f)))
+ (qu-push
+  load-event
+  url
+  message-qu))
 
 (call-with-new-thread
   (lambda ()
-  (define webview (make-webview))
-
-  (atomic-box-set! atomic-webview webview)
-  (launch-webkit-blocking webview)))
+    (launch-webkit-blocking message-qu)))
