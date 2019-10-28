@@ -26,7 +26,7 @@ struct BrowserMessage {
 
 static gboolean
 eventCallback(void *data) {
-  struct QueueData *qdata = (struct QueueData*)data;
+  struct QueueData *qdata = data;
 
   struct BrowserMessage *msg = g_async_queue_timeout_pop(qdata->queue, 20);
   if (msg != NULL) {
@@ -78,7 +78,26 @@ qu_push(SCM scm_msg_type,
 
 static WebKitWebView*
 make_webview() {
-  return WEBKIT_WEB_VIEW(webkit_web_view_new());
+  WebKitSettings *settings = webkit_settings_new();
+
+  WebKitHardwareAccelerationPolicy hw_policy = WEBKIT_HARDWARE_ACCELERATION_POLICY_ALWAYS;
+  webkit_settings_set_hardware_acceleration_policy(settings,
+                                                   hw_policy);
+
+  webkit_settings_set_enable_webgl(settings, TRUE);
+  webkit_settings_set_enable_accelerated_2d_canvas(settings, TRUE);
+  webkit_settings_set_enable_write_console_messages_to_stdout(settings, TRUE);
+  webkit_settings_set_media_playback_requires_user_gesture(settings, TRUE);
+  webkit_settings_set_media_playback_requires_user_gesture(settings, TRUE);
+  webkit_settings_set_enable_encrypted_media(settings, TRUE);
+  webkit_settings_set_enable_media_capabilities(settings, TRUE);
+  webkit_settings_set_enable_smooth_scrolling(settings, TRUE);
+  webkit_settings_set_enable_dns_prefetching(settings, TRUE);
+
+  webkit_settings_set_enable_hyperlink_auditing(settings, FALSE);
+  webkit_settings_set_enable_java(settings, FALSE);
+
+  return WEBKIT_WEB_VIEW(webkit_web_view_new_with_settings(settings));
 }
 
 /* GTK callbacks */
