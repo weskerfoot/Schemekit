@@ -180,6 +180,8 @@ run_repl(void *data, int argc, char **argv) {
 }
 
 int main(int argc, char *argv[]) {
+  /* Set environment variables relevant to webgtk */
+  setenv("LIBGL_DRI3_DISABLE", "1", -1);
   /* Initialize Guile */
   scm_boot_guile(argc, argv, run_repl, 0);
   return 0;
