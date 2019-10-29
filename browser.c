@@ -105,12 +105,18 @@ scm_ref(const char *var_name) {
 static WebKitWebView*
 make_webview() {
   WebKitSettings *settings = webkit_settings_new();
+  WebKitHardwareAccelerationPolicy hw_policy;
 
   /* Disable hardware acceleration by default */
   /* It seems to be causing issues */
-  //WebKitHardwareAccelerationPolicy hw_policy = WEBKIT_HARDWARE_ACCELERATION_POLICY_NEVER;
-  //webkit_settings_set_hardware_acceleration_policy(settings,
-                                                   //hw_policy);
+  if (conf_val("hw-acceleration")) {
+    hw_policy = WEBKIT_HARDWARE_ACCELERATION_POLICY_ALWAYS;
+  }
+  else {
+    hw_policy = WEBKIT_HARDWARE_ACCELERATION_POLICY_NEVER;
+  }
+
+  webkit_settings_set_hardware_acceleration_policy(settings, hw_policy);
 
   webkit_settings_set_enable_webgl(settings, conf_val("webgl"));
   webkit_settings_set_enable_accelerated_2d_canvas(settings, conf_val("2d-canvas"));
