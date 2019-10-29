@@ -4,11 +4,13 @@ A web browser you can control from your Scheme repl!
 
 ## Dependencies
 * gtk3
-* webkit2gtk-4.0
+* webkit2gtk
 * guile-2.2
 
 ## Optional Dependencies
 * gst-plugins-bad (To play videos that use certain codecs, e.g. Youtube)
+* gst-libav (Required to watch videos on certain sites, e.g. Twitch.tv)
+* libvpx (May also be required for videos)
 * webkit2gtk >= 2.27 for performance issue fixes
 
 ## How to build

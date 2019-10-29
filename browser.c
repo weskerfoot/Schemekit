@@ -88,15 +88,19 @@ make_webview() {
   webkit_settings_set_enable_accelerated_2d_canvas(settings, TRUE);
   webkit_settings_set_enable_write_console_messages_to_stdout(settings, TRUE);
   webkit_settings_set_media_playback_requires_user_gesture(settings, TRUE);
-  webkit_settings_set_media_playback_requires_user_gesture(settings, TRUE);
+
+  webkit_settings_set_enable_media_stream(settings, TRUE);
   webkit_settings_set_enable_encrypted_media(settings, TRUE);
   webkit_settings_set_enable_media_capabilities(settings, TRUE);
+  webkit_settings_set_enable_mediasource(settings, TRUE);
+
   webkit_settings_set_enable_dns_prefetching(settings, TRUE);
   webkit_settings_set_enable_javascript(settings, TRUE);
   webkit_settings_set_enable_page_cache(settings, TRUE);
+  webkit_settings_set_enable_developer_extras(settings, TRUE);
   //webkit_settings_set_draw_compositing_indicators(settings, TRUE);
 
-  webkit_settings_set_enable_smooth_scrolling(settings, FALSE);
+  webkit_settings_set_enable_smooth_scrolling(settings, TRUE);
   webkit_settings_set_enable_hyperlink_auditing(settings, FALSE);
   webkit_settings_set_enable_java(settings, FALSE);
 
