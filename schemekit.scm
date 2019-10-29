@@ -2,6 +2,12 @@
 (define close-event 1)
 (define empty-event 2)
 
+(define config
+ (alist->hash-table
+  '(
+    ("console-log" . 0)
+   )))
+
 (define (open-page url)
  (qu-push
   load-event

@@ -4,10 +4,13 @@
 #include <libguile.h>
 #include <libguile/strings.h>
 
+#include "browser.h"
+
 static void
 load_modules(void) {
   scm_c_use_module("ice-9 threads");
   scm_c_use_module("ice-9 atomic");
+  scm_c_use_module("ice-9 hash-table");
 }
 
 struct QueueData {
@@ -28,7 +31,7 @@ static gboolean
 eventCallback(void *data) {
   struct QueueData *qdata = data;
 
-  struct BrowserMessage *msg = g_async_queue_timeout_pop(qdata->queue, 20);
+  struct BrowserMessage *msg = g_async_queue_timeout_pop(qdata->queue, 10);
   if (msg != NULL) {
     switch (msg->event) {
       case LOAD:
@@ -76,17 +79,42 @@ qu_push(SCM scm_msg_type,
   return SCM_BOOL_T;
 }
 
+static int
+read_config_val(char * const key) {
+  /* Lookup a key value in a Scheme hash-table */
+  SCM config = scm_ref("config");
+  SCM scm_key = scm_from_locale_string(key);
+  SCM result = scm_hash_ref(config, scm_key, NULL);
+
+  if (result != NULL) {
+    return scm_to_int(result);
+  }
+  else {
+    /* TODO check the key and then do an intelligent default? */
+    /* For now, default to 1 = ON */
+    return 1;
+  }
+}
+
+static SCM
+scm_ref(const char *var_name) {
+  /* Lookup and de-reference a Scheme value */
+  return scm_variable_ref(scm_c_lookup(var_name));
+}
+
 static WebKitWebView*
 make_webview() {
   WebKitSettings *settings = webkit_settings_new();
 
-  WebKitHardwareAccelerationPolicy hw_policy = WEBKIT_HARDWARE_ACCELERATION_POLICY_NEVER;
-  webkit_settings_set_hardware_acceleration_policy(settings,
-                                                   hw_policy);
+  /* Disable hardware acceleration by default */
+  /* It seems to be causing issues */
+  //WebKitHardwareAccelerationPolicy hw_policy = WEBKIT_HARDWARE_ACCELERATION_POLICY_NEVER;
+  //webkit_settings_set_hardware_acceleration_policy(settings,
+                                                   //hw_policy);
 
   webkit_settings_set_enable_webgl(settings, TRUE);
   webkit_settings_set_enable_accelerated_2d_canvas(settings, TRUE);
-  webkit_settings_set_enable_write_console_messages_to_stdout(settings, TRUE);
+  webkit_settings_set_enable_write_console_messages_to_stdout(settings, read_config_val("console-log"));
   webkit_settings_set_media_playback_requires_user_gesture(settings, TRUE);
 
   webkit_settings_set_enable_media_stream(settings, TRUE);
@@ -101,7 +129,7 @@ make_webview() {
   //webkit_settings_set_draw_compositing_indicators(settings, TRUE);
 
   webkit_settings_set_enable_smooth_scrolling(settings, TRUE);
-  webkit_settings_set_enable_hyperlink_auditing(settings, FALSE);
+  webkit_settings_set_enable_hyperlink_auditing(settings, TRUE);
   webkit_settings_set_enable_java(settings, FALSE);
 
   return WEBKIT_WEB_VIEW(webkit_web_view_new_with_settings(settings));
@@ -134,6 +162,11 @@ launch_webkit(SCM qu) {
 
   /* Get a default webkit context for modifying the cache policy */
   WebKitWebContext *webkit_ctx = webkit_web_context_get_default();
+
+  WebKitProcessModel process_model = WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES;
+
+  webkit_web_context_set_process_model(webkit_ctx,
+                                       process_model);
 
   webkit_web_context_set_cache_model(webkit_ctx,
                                      WEBKIT_CACHE_MODEL_WEB_BROWSER);
@@ -179,6 +212,7 @@ launch_webkit(SCM qu) {
 static void
 run_repl(void *data, int argc, char **argv) {
   load_modules();
+  SCM current_module = scm_current_module();
 
   GAsyncQueue *message_qu = g_async_queue_new();
 
@@ -194,7 +228,6 @@ run_repl(void *data, int argc, char **argv) {
 
 int main(int argc, char *argv[]) {
   /* Set environment variables relevant to webgtk */
-  //setenv("LIBGL_DRI3_DISABLE", "1", -1);
   /* Initialize Guile */
   scm_boot_guile(argc, argv, run_repl, 0);
   return 0;
