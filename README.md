@@ -9,6 +9,7 @@ A web browser you can control from your Scheme repl!
 
 ## Optional Dependencies
 * gst-plugins-bad (To play videos that use certain codecs, e.g. Youtube)
+* webkit2gtk >= 2.27 for performance issue fixes
 
 ## How to build
 * Compile with `./build.sh`

@@ -80,7 +80,7 @@ static WebKitWebView*
 make_webview() {
   WebKitSettings *settings = webkit_settings_new();
 
-  WebKitHardwareAccelerationPolicy hw_policy = WEBKIT_HARDWARE_ACCELERATION_POLICY_ALWAYS;
+  WebKitHardwareAccelerationPolicy hw_policy = WEBKIT_HARDWARE_ACCELERATION_POLICY_NEVER;
   webkit_settings_set_hardware_acceleration_policy(settings,
                                                    hw_policy);
 
@@ -91,9 +91,12 @@ make_webview() {
   webkit_settings_set_media_playback_requires_user_gesture(settings, TRUE);
   webkit_settings_set_enable_encrypted_media(settings, TRUE);
   webkit_settings_set_enable_media_capabilities(settings, TRUE);
-  webkit_settings_set_enable_smooth_scrolling(settings, TRUE);
   webkit_settings_set_enable_dns_prefetching(settings, TRUE);
+  webkit_settings_set_enable_javascript(settings, TRUE);
+  webkit_settings_set_enable_page_cache(settings, TRUE);
+  //webkit_settings_set_draw_compositing_indicators(settings, TRUE);
 
+  webkit_settings_set_enable_smooth_scrolling(settings, FALSE);
   webkit_settings_set_enable_hyperlink_auditing(settings, FALSE);
   webkit_settings_set_enable_java(settings, FALSE);
 
@@ -129,7 +132,7 @@ launch_webkit(SCM qu) {
   WebKitWebContext *webkit_ctx = webkit_web_context_get_default();
 
   webkit_web_context_set_cache_model(webkit_ctx,
-                                     WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
+                                     WEBKIT_CACHE_MODEL_WEB_BROWSER);
 
   /* Initialize GTK+ */
   gtk_init(0, NULL);
@@ -180,14 +183,14 @@ run_repl(void *data, int argc, char **argv) {
   scm_c_define_gsubr("launch-webkit-blocking", 1, 0, 0, launch_webkit);
   scm_c_define_gsubr("qu-push", 3, 0, 0, qu_push);
 
-  scm_c_primitive_load("./browser.scm");
+  scm_c_primitive_load("./schemekit.scm");
 
   scm_shell(argc, argv);
 }
 
 int main(int argc, char *argv[]) {
   /* Set environment variables relevant to webgtk */
-  setenv("LIBGL_DRI3_DISABLE", "1", -1);
+  //setenv("LIBGL_DRI3_DISABLE", "1", -1);
   /* Initialize Guile */
   scm_boot_guile(argc, argv, run_repl, 0);
   return 0;
