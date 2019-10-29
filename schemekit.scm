@@ -6,6 +6,7 @@
  (alist->hash-table
   '(
     ("console-log" . 0)
+    ("compositing-indicators" . 0)
    )))
 
 (define (open-page url)

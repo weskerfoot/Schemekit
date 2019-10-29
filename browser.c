@@ -80,7 +80,7 @@ qu_push(SCM scm_msg_type,
 }
 
 static int
-read_config_val(char * const key) {
+conf_val(char * const key) {
   /* Lookup a key value in a Scheme hash-table */
   SCM config = scm_ref("config");
   SCM scm_key = scm_from_locale_string(key);
@@ -112,24 +112,24 @@ make_webview() {
   //webkit_settings_set_hardware_acceleration_policy(settings,
                                                    //hw_policy);
 
-  webkit_settings_set_enable_webgl(settings, TRUE);
-  webkit_settings_set_enable_accelerated_2d_canvas(settings, TRUE);
-  webkit_settings_set_enable_write_console_messages_to_stdout(settings, read_config_val("console-log"));
-  webkit_settings_set_media_playback_requires_user_gesture(settings, TRUE);
+  webkit_settings_set_enable_webgl(settings, conf_val("webgl"));
+  webkit_settings_set_enable_accelerated_2d_canvas(settings, conf_val("2d-canvas"));
+  webkit_settings_set_enable_write_console_messages_to_stdout(settings, conf_val("console-log"));
+  webkit_settings_set_media_playback_requires_user_gesture(settings, conf_val("media-gestures"));
 
-  webkit_settings_set_enable_media_stream(settings, TRUE);
-  webkit_settings_set_enable_encrypted_media(settings, TRUE);
-  webkit_settings_set_enable_media_capabilities(settings, TRUE);
-  webkit_settings_set_enable_mediasource(settings, TRUE);
+  webkit_settings_set_enable_media_stream(settings, conf_val("media-stream"));
+  webkit_settings_set_enable_encrypted_media(settings, conf_val("encrypted-media"));
+  webkit_settings_set_enable_media_capabilities(settings, conf_val("media-capabilities"));
+  webkit_settings_set_enable_mediasource(settings, conf_val("media-source"));
 
-  webkit_settings_set_enable_dns_prefetching(settings, TRUE);
-  webkit_settings_set_enable_javascript(settings, TRUE);
-  webkit_settings_set_enable_page_cache(settings, TRUE);
-  webkit_settings_set_enable_developer_extras(settings, TRUE);
-  //webkit_settings_set_draw_compositing_indicators(settings, TRUE);
+  webkit_settings_set_enable_dns_prefetching(settings, conf_val("dns-prefetching"));
+  webkit_settings_set_enable_javascript(settings, conf_val("javascript"));
+  webkit_settings_set_enable_page_cache(settings, conf_val("page-cache"));
+  webkit_settings_set_enable_developer_extras(settings, conf_val("dev-extras"));
+  webkit_settings_set_draw_compositing_indicators(settings, conf_val("compositing-indicators"));
 
-  webkit_settings_set_enable_smooth_scrolling(settings, TRUE);
-  webkit_settings_set_enable_hyperlink_auditing(settings, TRUE);
+  webkit_settings_set_enable_smooth_scrolling(settings, conf_val("smooth-scrolling"));
+  webkit_settings_set_enable_hyperlink_auditing(settings, conf_val("hyperlink-auditing"));
   webkit_settings_set_enable_java(settings, FALSE);
 
   return WEBKIT_WEB_VIEW(webkit_web_view_new_with_settings(settings));
