@@ -154,7 +154,6 @@ webViewChanged(WebKitWebView *web_view,
         break;
       case WEBKIT_LOAD_FINISHED:
         qu_push(LOAD, (char*)webkit_web_view_get_uri(web_view), qdata->guile_qu);
-        /* Load finished, we can now stop the spinner */
         break;
     }
 }
