@@ -15,8 +15,8 @@
  (qu-push
   load-event
   url
-  message-qu))
+  gtk-qu))
 
 (call-with-new-thread
   (lambda ()
-    (launch-webkit-blocking message-qu)))
+    (launch-webkit-blocking gtk-qu guile-qu)))

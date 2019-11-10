@@ -13,30 +13,18 @@ load_modules(void) {
   scm_c_use_module("ice-9 hash-table");
 }
 
-struct QueueData {
-  GAsyncQueue *queue;
-  WebKitWebView *webView;
-};
-
-struct BrowserMessage {
-  enum BrowserEvent {
-    LOAD = 0,
-    CLOSE = 1,
-    EMPTY = 2
-  } event;
-  void *data;
-};
-
 static gboolean
 eventCallback(void *data) {
   struct QueueData *qdata = data;
+  struct BrowserMessage *msg = g_async_queue_timeout_pop(qdata->gtk_qu, 10);
 
-  struct BrowserMessage *msg = g_async_queue_timeout_pop(qdata->queue, 10);
   if (msg != NULL) {
     switch (msg->event) {
       case LOAD:
         printf("Got a load event\n");
+        printf("Messaging Guile\n");
         printf(msg->data);
+        qu_push(msg->event, msg->data, qdata->guile_qu);
         webkit_web_view_load_uri(qdata->webView, msg->data);
         break;
       case CLOSE:
@@ -51,16 +39,14 @@ eventCallback(void *data) {
   return TRUE;
 }
 
-static SCM
-qu_push(SCM scm_msg_type,
-        SCM scm_message,
-        SCM scm_qu) {
+static int
+qu_push(enum BrowserEvent msg_type,
+        char *message,
+        GAsyncQueue *g_queue) {
 
   struct BrowserMessage *msg = malloc( sizeof(*msg) );
 
-  int msg_type = scm_to_int(scm_msg_type);
-
-  msg->data = scm_to_locale_string(scm_message);
+  msg->data = message;
   switch (msg_type) {
     case LOAD:
       msg->event = LOAD;
@@ -73,8 +59,21 @@ qu_push(SCM scm_msg_type,
       break;
   }
 
-  GAsyncQueue *g_queue = scm_to_pointer(scm_qu);
   g_async_queue_push(g_queue, msg);
+
+  return 1;
+}
+
+static SCM
+scm_qu_push(SCM scm_msg_type,
+            SCM scm_message,
+            SCM scm_qu) {
+
+  enum BrowserEvent msg_type = scm_to_int(scm_msg_type);
+  char *data = scm_to_locale_string(scm_message);
+  GAsyncQueue *g_queue = scm_to_pointer(scm_qu);
+
+  qu_push(msg_type, data, g_queue);
 
   return SCM_BOOL_T;
 }
@@ -162,9 +161,10 @@ closeWebViewCb(WebKitWebView *webView,
 }
 
 SCM
-launch_webkit(SCM qu) {
+launch_webkit(SCM scm_gtk_qu, SCM scm_guile_qu) {
   WebKitWebView *webView = make_webview();
-  GAsyncQueue *g_queue = scm_to_pointer(qu);
+  GAsyncQueue *gtk_qu = scm_to_pointer(scm_gtk_qu);
+  GAsyncQueue *guile_qu = scm_to_pointer(scm_guile_qu);
 
   /* Get a default webkit context for modifying the cache policy */
   WebKitWebContext *webkit_ctx = webkit_web_context_get_default();
@@ -182,7 +182,8 @@ launch_webkit(SCM qu) {
 
   struct QueueData queue_data;
 
-  queue_data.queue = g_queue;
+  queue_data.gtk_qu = gtk_qu;
+  queue_data.guile_qu = guile_qu;
   queue_data.webView = webView;
 
   g_idle_add(eventCallback, &queue_data);
@@ -220,12 +221,17 @@ run_repl(void *data, int argc, char **argv) {
   load_modules();
   SCM current_module = scm_current_module();
 
-  GAsyncQueue *message_qu = g_async_queue_new();
+  GAsyncQueue *browser_event_qu = g_async_queue_new();
+  GAsyncQueue *guile_event_qu = g_async_queue_new();
 
-  scm_c_define("message-qu", scm_from_pointer(message_qu, NULL));
+  /* Used for passing messages to the GTK thread */
+  scm_c_define("gtk-qu", scm_from_pointer(browser_event_qu, NULL));
 
-  scm_c_define_gsubr("launch-webkit-blocking", 1, 0, 0, launch_webkit);
-  scm_c_define_gsubr("qu-push", 3, 0, 0, qu_push);
+  /* Used for passing messages back to the Guile thread */
+  scm_c_define("guile-qu", scm_from_pointer(guile_event_qu, NULL));
+
+  scm_c_define_gsubr("launch-webkit-blocking", 2, 0, 0, launch_webkit);
+  scm_c_define_gsubr("qu-push", 3, 0, 0, scm_qu_push);
 
   scm_c_primitive_load("./schemekit.scm");
 
