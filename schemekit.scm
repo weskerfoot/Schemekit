@@ -20,3 +20,14 @@
 (call-with-new-thread
   (lambda ()
     (launch-webkit-blocking gtk-qu guile-qu)))
+
+(define (handle-events)
+  (begin
+   (sleep 1)
+   (let ((msg (qu-pop guile-qu)))
+    (if msg
+     (display (format "~a loaded\n" msg))
+     '())
+    (handle-events))))
+
+(call-with-new-thread handle-events)

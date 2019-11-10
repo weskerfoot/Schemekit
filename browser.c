@@ -4,6 +4,7 @@
 #include <libguile.h>
 #include <libguile/strings.h>
 
+/* Our includes */
 #include "browser.h"
 #include "scheme_functions.h"
 
@@ -15,17 +16,16 @@ load_modules(void) {
 }
 
 static gboolean
-eventCallback(void *data) {
+messageEvent(void *data) {
   struct QueueData *qdata = data;
   struct BrowserMessage *msg = g_async_queue_timeout_pop(qdata->gtk_qu, 10);
 
   if (msg != NULL) {
+    printf("%d\n", msg->event);
+    printf("Got an event\n");
     switch (msg->event) {
       case LOAD:
-        printf("Got a load event\n");
-        printf("Messaging Guile\n");
-        printf(msg->data);
-        qu_push(msg->event, msg->data, qdata->guile_qu);
+        printf("Loading %s\n", (char*)msg->data);
         webkit_web_view_load_uri(qdata->webView, msg->data);
         break;
       case CLOSE:
@@ -45,9 +45,10 @@ qu_push(enum BrowserEvent msg_type,
         char *message,
         GAsyncQueue *g_queue) {
 
-  struct BrowserMessage *msg = malloc( sizeof(*msg) );
+  struct BrowserMessage *msg = malloc( sizeof (*msg) );
 
   msg->data = message;
+
   switch (msg_type) {
     case LOAD:
       msg->event = LOAD;
@@ -59,9 +60,7 @@ qu_push(enum BrowserEvent msg_type,
       msg->event = EMPTY;
       break;
   }
-
   g_async_queue_push(g_queue, msg);
-
   return 1;
 }
 
@@ -104,7 +103,6 @@ make_webview() {
   webkit_settings_set_media_playback_requires_user_gesture(settings, conf_val("media-gestures"));
 
   webkit_settings_set_enable_media_stream(settings, conf_val("media-stream"));
-  webkit_settings_set_enable_encrypted_media(settings, conf_val("encrypted-media"));
   webkit_settings_set_enable_media_capabilities(settings, conf_val("media-capabilities"));
   webkit_settings_set_enable_mediasource(settings, conf_val("media-source"));
 
@@ -141,8 +139,30 @@ closeWebViewCb(WebKitWebView *webView,
     return TRUE;
 }
 
+static void
+webViewChanged(WebKitWebView *web_view,
+               WebKitLoadEvent load_event,
+               struct QueueData *qdata) {
+    switch (load_event) {
+      case WEBKIT_LOAD_STARTED:
+      case WEBKIT_LOAD_REDIRECTED:
+      case WEBKIT_LOAD_COMMITTED:
+        /* The load is being performed. Current URI is
+         * the final one and it won't change unless a new
+         * load is requested or a navigation within the
+         * same page is performed */
+        break;
+      case WEBKIT_LOAD_FINISHED:
+        qu_push(LOAD, (char*)webkit_web_view_get_uri(web_view), qdata->guile_qu);
+        /* Load finished, we can now stop the spinner */
+        break;
+    }
+}
+
 SCM
-launch_webkit(SCM scm_gtk_qu, SCM scm_guile_qu) {
+launch_webkit(SCM scm_gtk_qu,
+              SCM scm_guile_qu) {
+
   WebKitWebView *webView = make_webview();
   GAsyncQueue *gtk_qu = scm_to_pointer(scm_gtk_qu);
   GAsyncQueue *guile_qu = scm_to_pointer(scm_guile_qu);
@@ -163,11 +183,12 @@ launch_webkit(SCM scm_gtk_qu, SCM scm_guile_qu) {
 
   struct QueueData queue_data;
 
+  /* Initialize the queue data */
   queue_data.gtk_qu = gtk_qu;
   queue_data.guile_qu = guile_qu;
   queue_data.webView = webView;
 
-  g_idle_add(eventCallback, &queue_data);
+  g_idle_add(messageEvent, &queue_data);
 
   /* Create an 800x600 window that will contain the browser instance */
   GtkWidget *main_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -181,6 +202,7 @@ launch_webkit(SCM scm_gtk_qu, SCM scm_guile_qu) {
   /* closed, the program will exit */
   g_signal_connect(main_window, "destroy", G_CALLBACK(destroyWindowCb), NULL);
   g_signal_connect(webView, "close", G_CALLBACK(closeWebViewCb), main_window);
+  g_signal_connect(webView, "load-changed", G_CALLBACK(webViewChanged), &queue_data);
 
   /* Load a web page into the browser instance */
   webkit_web_view_load_uri(webView, "http://google.com/");
@@ -200,8 +222,6 @@ launch_webkit(SCM scm_gtk_qu, SCM scm_guile_qu) {
 static void
 run_repl(void *data, int argc, char **argv) {
   load_modules();
-  SCM current_module = scm_current_module();
-
   GAsyncQueue *browser_event_qu = g_async_queue_new();
   GAsyncQueue *guile_event_qu = g_async_queue_new();
 
@@ -213,6 +233,7 @@ run_repl(void *data, int argc, char **argv) {
 
   scm_c_define_gsubr("launch-webkit-blocking", 2, 0, 0, launch_webkit);
   scm_c_define_gsubr("qu-push", 3, 0, 0, scm_qu_push);
+  scm_c_define_gsubr("qu-pop", 1, 0, 0, scm_qu_pop);
 
   scm_c_primitive_load("./schemekit.scm");
 
