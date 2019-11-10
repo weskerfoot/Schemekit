@@ -5,6 +5,7 @@
 #include <libguile/strings.h>
 
 #include "browser.h"
+#include "scheme_functions.h"
 
 static void
 load_modules(void) {
@@ -64,20 +65,6 @@ qu_push(enum BrowserEvent msg_type,
   return 1;
 }
 
-static SCM
-scm_qu_push(SCM scm_msg_type,
-            SCM scm_message,
-            SCM scm_qu) {
-
-  enum BrowserEvent msg_type = scm_to_int(scm_msg_type);
-  char *data = scm_to_locale_string(scm_message);
-  GAsyncQueue *g_queue = scm_to_pointer(scm_qu);
-
-  qu_push(msg_type, data, g_queue);
-
-  return SCM_BOOL_T;
-}
-
 static int
 conf_val(char * const key) {
   /* Lookup a key value in a Scheme hash-table */
@@ -93,12 +80,6 @@ conf_val(char * const key) {
     /* For now, default to 1 = ON */
     return 1;
   }
-}
-
-static SCM
-scm_ref(const char *var_name) {
-  /* Lookup and de-reference a Scheme value */
-  return scm_variable_ref(scm_c_lookup(var_name));
 }
 
 static WebKitWebView*

@@ -19,6 +19,8 @@ struct BrowserMessage {
 
 static SCM scm_ref(const char *);
 static int read_config_val(char * const);
-static SCM qu_push(enum BrowserEvent, char *, GAsyncQueue *);
+static int qu_push(enum BrowserEvent, char *, GAsyncQueue *);
+static SCM scm_qu_push(SCM, SCM, SCM);
+
 
 
