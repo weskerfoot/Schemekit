@@ -5,7 +5,6 @@ scm_qu_pop(SCM scm_qu) {
   struct BrowserMessage *msg = g_async_queue_timeout_pop(g_queue, 10);
 
   if (msg != NULL) {
-    printf(msg->data);
     return scm_from_locale_string(msg->data);
   }
   else {
