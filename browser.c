@@ -18,7 +18,7 @@ load_modules(void) {
 static gboolean
 messageEvent(void *data) {
   struct QueueData *qdata = data;
-  struct BrowserMessage *msg = g_async_queue_timeout_pop(qdata->gtk_qu, 10);
+  struct BrowserMessage *msg = g_async_queue_timeout_pop(qdata->gtk_qu, 1);
 
   if (msg != NULL) {
     printf("%d\n", msg->event);

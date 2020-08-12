@@ -1,3 +1,7 @@
+(use-modules
+  (srfi srfi-98)
+  (ice-9 format))
+
 (define load-event 0)
 (define close-event 1)
 (define empty-event 2)
@@ -17,6 +21,12 @@
   url
   gtk-qu))
 
+
+(define (make-opener domain-name)
+  (lambda ()
+    (open-page
+      (format "https://~a" domain-name))))
+
 (call-with-new-thread
   (lambda ()
     (launch-webkit-blocking gtk-qu guile-qu)))
@@ -29,5 +39,20 @@
      (display (format "~a loaded\n" msg))
      '())
     (handle-events))))
+
+
+(define home-dir
+  (getenv "HOME"))
+
+(display home-dir)
+
+(cond
+  ((eq? #f home-dir)
+   (display "Could not load custom schemekit.scm"))
+  (else
+    (load
+      (format "~a/.config/schemekit.scm"
+              home-dir))))
+
 
 (call-with-new-thread handle-events)
