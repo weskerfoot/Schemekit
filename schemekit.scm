@@ -12,7 +12,8 @@
   '(
     ("console-log" . 0)
     ("compositing-indicators" . 0)
-    ("hw-acceleration" . 0)
+    ("hw-acceleration" . 1)
+    ("smooth-scrolling" . 0)
    )))
 
 (define (open-page url)

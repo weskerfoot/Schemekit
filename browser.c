@@ -18,7 +18,7 @@ load_modules(void) {
 static gboolean
 messageEvent(void *data) {
   struct QueueData *qdata = data;
-  struct BrowserMessage *msg = g_async_queue_timeout_pop(qdata->gtk_qu, 1);
+  struct BrowserMessage *msg = g_async_queue_timeout_pop(qdata->gtk_qu, 100);
 
   if (msg != NULL) {
     printf("%d\n", msg->event);
@@ -109,6 +109,7 @@ make_webview() {
   webkit_settings_set_enable_dns_prefetching(settings, conf_val("dns-prefetching"));
   webkit_settings_set_enable_javascript(settings, conf_val("javascript"));
   webkit_settings_set_enable_page_cache(settings, conf_val("page-cache"));
+  webkit_settings_set_enable_offline_web_application_cache(settings, conf_val("offline-web-app-cache"));
   webkit_settings_set_enable_developer_extras(settings, conf_val("dev-extras"));
   webkit_settings_set_draw_compositing_indicators(settings, conf_val("compositing-indicators"));
 
