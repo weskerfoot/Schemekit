@@ -1,3 +1,6 @@
+# **This repository has moved to [https://git.wesk.tech/wes/Schemekit](https://git.wesk.tech/wes/Schemekit)**
+
+
 ## What is this?
 
 A web browser you can control from your Scheme repl!
